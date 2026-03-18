@@ -8,7 +8,7 @@ app.use(express.json({ limit: '10mb' }));
 const API_KEY = process.env.PDF_SERVICE_API_KEY;
 
 function auth(req, res, next) {
-  const token = req.headers['authorization']?.replace('Bearer ', '');
+  const token = req.headers['x-api-key'];
   if (token !== API_KEY) return res.status(401).json({ error: 'Unauthorized' });
   next();
 }
