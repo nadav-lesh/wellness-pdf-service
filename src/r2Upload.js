@@ -1,24 +1,28 @@
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'wellness-magazine';
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL; // e.g. https://pub-xxx.r2.dev
-
-const client = new S3Client({
-  region: 'auto',
-  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
-  },
-});
-
 async function uploadToR2(buffer, filename) {
+  // Read env vars at call time — avoids module-load timing issues on Railway
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const bucket = process.env.R2_BUCKET_NAME || 'wellness-magazine';
+  const publicUrl = process.env.R2_PUBLIC_URL;
+
+  console.log(`[R2] accountId=${accountId ? 'set' : 'MISSING'} accessKeyId=${accessKeyId ? 'set' : 'MISSING'} secretAccessKey=${secretAccessKey ? 'set' : 'MISSING'}`);
+
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    throw new Error(`Missing R2 credentials: accountId=${!!accountId} accessKeyId=${!!accessKeyId} secretAccessKey=${!!secretAccessKey}`);
+  }
+
+  const client = new S3Client({
+    region: 'auto',
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+
   const command = new PutObjectCommand({
-    Bucket: R2_BUCKET_NAME,
+    Bucket: bucket,
     Key: filename,
     Body: buffer,
     ContentType: 'application/pdf',
@@ -26,17 +30,11 @@ async function uploadToR2(buffer, filename) {
 
   await client.send(command);
 
-  // If a public R2.dev URL is configured, use it directly
-  if (R2_PUBLIC_URL) {
-    return `${R2_PUBLIC_URL.replace(/\/$/, '')}/${filename}`;
+  if (publicUrl) {
+    return `${publicUrl.replace(/\/$/, '')}/${filename}`;
   }
 
-  // Otherwise generate a 7-day pre-signed URL
-  const getCommand = new PutObjectCommand({
-    Bucket: R2_BUCKET_NAME,
-    Key: filename,
-  });
-
+  const getCommand = new PutObjectCommand({ Bucket: bucket, Key: filename });
   const signedUrl = await getSignedUrl(client, getCommand, { expiresIn: 604800 });
   return signedUrl;
 }
