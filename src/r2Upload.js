@@ -18,7 +18,7 @@ async function uploadToR2(buffer, filename) {
   const client = new S3Client({
     region: 'auto',
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId, secretAccessKey },
+    credentials: async () => ({ accessKeyId, secretAccessKey }),
   });
 
   const command = new PutObjectCommand({
