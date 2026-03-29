@@ -3,13 +3,13 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 async function uploadToR2(buffer, filename) {
   // Read env vars at call time — avoids module-load timing issues on Railway
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-  const bucket = process.env.R2_BUCKET_NAME || 'wellness-magazine';
+  const accountId = (process.env.R2_ACCOUNT_ID || '').trim();
+  const accessKeyId = (process.env.R2_ACCESS_KEY_ID || '').trim();
+  const secretAccessKey = (process.env.R2_SECRET_ACCESS_KEY || '').trim();
+  const bucket = (process.env.R2_BUCKET_NAME || 'wellness-magazine').trim();
   const publicUrl = process.env.R2_PUBLIC_URL;
 
-  console.log(`[R2] accountId=${accountId ? 'set' : 'MISSING'} accessKeyId=${accessKeyId ? 'set' : 'MISSING'} secretAccessKey=${secretAccessKey ? 'set' : 'MISSING'}`);
+  console.log(`[R2] accountId=${accountId ? `set(len=${accountId.length})` : 'MISSING'} accessKeyId=${accessKeyId ? `set(len=${accessKeyId.length})` : 'MISSING'} secretAccessKey=${secretAccessKey ? `set(len=${secretAccessKey.length})` : 'MISSING'}`);
 
   if (!accountId || !accessKeyId || !secretAccessKey) {
     throw new Error(`Missing R2 credentials: accountId=${!!accountId} accessKeyId=${!!accessKeyId} secretAccessKey=${!!secretAccessKey}`);
