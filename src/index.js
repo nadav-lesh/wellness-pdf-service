@@ -5,10 +5,10 @@ const { uploadToR2 } = require('./r2Upload');
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
-const API_KEY = process.env.PDF_SERVICE_API_KEY;
-
 function auth(req, res, next) {
+  const API_KEY = process.env.PDF_SERVICE_API_KEY;
   const token = req.headers['x-api-key'];
+  if (!API_KEY) return res.status(500).json({ error: 'PDF_SERVICE_API_KEY not set in environment' });
   if (token !== API_KEY) return res.status(401).json({ error: 'Unauthorized' });
   next();
 }
