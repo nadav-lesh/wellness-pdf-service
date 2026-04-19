@@ -29,7 +29,7 @@ async function generatePdf(content) {
 }
 
 function buildHtml(content) {
-  const { issue_theme, cover_image_url, recipes = [], processed_at } = content;
+  const { issue_theme, cover_image_url, recipes = [], supplements = [], youtube_tips = [], processed_at } = content;
 
   const issueDate = new Date(processed_at || Date.now()).toLocaleDateString('he-IL', {
     year: 'numeric', month: 'long', day: 'numeric',
@@ -285,6 +285,112 @@ function buildHtml(content) {
       font-weight: 500;
     }
 
+    /* ── YouTube Tips Page ── */
+    .tips-page {
+      padding: 14mm;
+      background: #0d1b2a;
+      color: #ffffff;
+    }
+
+    .tips-page .section-label {
+      font-size: 9pt;
+      font-weight: 500;
+      color: #74C69D;
+      letter-spacing: 3px;
+      margin-bottom: 6mm;
+    }
+
+    .tips-page h2 {
+      font-size: 24pt;
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 8mm;
+      line-height: 1.2;
+    }
+
+    .tip-card {
+      background: rgba(255,255,255,0.07);
+      border-right: 4px solid #52B788;
+      border-radius: 3mm;
+      padding: 5mm 6mm;
+      margin-bottom: 5mm;
+    }
+
+    .tip-source {
+      font-size: 8pt;
+      color: #74C69D;
+      margin-bottom: 2mm;
+      font-weight: 300;
+    }
+
+    .tip-text {
+      font-size: 11pt;
+      color: #e8e8e8;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+
+    /* ── Supplements Page ── */
+    .supplements-page {
+      padding: 14mm;
+      background: #fafafa;
+    }
+
+    .supplements-page .section-label {
+      font-size: 9pt;
+      font-weight: 500;
+      color: #52B788;
+      letter-spacing: 3px;
+      margin-bottom: 6mm;
+    }
+
+    .supplements-page h2 {
+      font-size: 24pt;
+      font-weight: 900;
+      color: #1a2e1a;
+      margin-bottom: 8mm;
+    }
+
+    .supplement-card {
+      display: flex;
+      gap: 5mm;
+      background: #ffffff;
+      border-radius: 3mm;
+      padding: 5mm;
+      margin-bottom: 5mm;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .supplement-image {
+      width: 22mm;
+      height: 22mm;
+      object-fit: cover;
+      border-radius: 2mm;
+      flex-shrink: 0;
+    }
+
+    .supplement-info { flex: 1; }
+
+    .supplement-name {
+      font-size: 13pt;
+      font-weight: 700;
+      color: #1a2e1a;
+      margin-bottom: 2mm;
+    }
+
+    .supplement-desc {
+      font-size: 9pt;
+      color: #555;
+      line-height: 1.5;
+      margin-bottom: 2mm;
+    }
+
+    .supplement-price {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #2D6A4F;
+    }
+
     @media print {
       .page { page-break-after: always; }
     }
@@ -310,6 +416,38 @@ function buildHtml(content) {
 
   <!-- Recipe Pages -->
   ${recipesHtml}
+
+  <!-- YouTube Tips Page -->
+  ${youtube_tips.length > 0 ? `
+  <div class="page tips-page">
+    <div class="section-label">YOUTUBE · טיפי הבריאות</div>
+    <h2>טיפים שחייבים לדעת</h2>
+    ${youtube_tips.map(t => `
+      <div class="tip-card">
+        <div class="tip-source">${t.title || 'YouTube'}</div>
+        <div class="tip-text">${t.tip || ''}</div>
+      </div>
+    `).join('')}
+  </div>
+  ` : ''}
+
+  <!-- Supplements Page -->
+  ${supplements.length > 0 ? `
+  <div class="page supplements-page">
+    <div class="section-label">SUPPLEMENTS · תוספי תזונה</div>
+    <h2>המומלצים השבוע</h2>
+    ${supplements.map(s => `
+      <div class="supplement-card">
+        ${s.image ? `<img class="supplement-image" src="${s.image}" alt="${s.name}" />` : ''}
+        <div class="supplement-info">
+          <div class="supplement-name">${s.name || ''}</div>
+          <div class="supplement-desc">${s.description || ''}</div>
+          ${s.price ? `<div class="supplement-price">${s.price}</div>` : ''}
+        </div>
+      </div>
+    `).join('')}
+  </div>
+  ` : ''}
 
 </body>
 </html>`;
