@@ -35,18 +35,10 @@ function buildHtml(content) {
     year: 'numeric', month: 'long', day: 'numeric',
   });
 
-  // Build YouTube tips: prefer editorial.youtube_tips (strings), fall back to raw youtube_tips (objects with .tip)
-  const ytTips = (editorial.youtube_tips && editorial.youtube_tips.length > 0)
-    ? editorial.youtube_tips
-    : youtube_tips.filter(t => t.tip && t.tip.length > 10).slice(0, 3).map(t => t.tip);
-
   const recipesHtml = recipes.map((r, i) => {
     const isFirst = i === 0;
-    // Recipe 1: use the Action→Reason→Benefit editorial tip
-    // Recipes 2+: use their hebrew_description in the same styled box
-    const editorialTip = isFirst && editorial.recipe_tip ? editorial.recipe_tip : (r.hebrew_description || '');
+    const editorialTip = isFirst && editorial.recipe_tip ? editorial.recipe_tip : '';
     const editorialWhy = isFirst && editorial.recipe_why ? editorial.recipe_why : '';
-    const editorialLabel = isFirst ? '\u05DC\u05DE\u05D4 \u05D6\u05D4 \u05D8\u05D5\u05D1 \u05DC\u05DA?' : '\u05DC\u05DE\u05D4 \u05DC\u05D0\u05DB\u05D5\u05DC \u05D0\u05EA \u05D6\u05D4?';
     return `
     <div class="page recipe-page">
       <div class="recipe-number">\u05DE\u05EA\u05DB\u05D5\u05DF ${['\u05D0', '\u05D1', '\u05D2'][i] || i + 1}</div>
@@ -54,11 +46,11 @@ function buildHtml(content) {
       ${r.image ? `<img class="recipe-image" src="${r.image}" alt="${r.hebrew_title}" />` : ''}
 
       <h2 class="recipe-title">${r.hebrew_title || ''}</h2>
-      ${isFirst ? '' : `<p class="recipe-desc">${r.hebrew_description || ''}</p>`}
+      <p class="recipe-desc">${r.hebrew_description || ''}</p>
 
       ${editorialTip ? `
         <div class="editorial-tip-box">
-          <div class="editorial-tip-label">${editorialLabel}</div>
+          <div class="editorial-tip-label">\u05DC\u05DE\u05D4 \u05D6\u05D4 \u05D8\u05D5\u05D1 \u05DC\u05DA?</div>
           <div class="editorial-tip-text">${editorialTip}</div>
           ${editorialWhy ? `<div class="editorial-why">${editorialWhy}</div>` : ''}
         </div>
@@ -575,26 +567,17 @@ function buildHtml(content) {
   <!-- Recipe Pages -->
   ${recipesHtml}
 
-  <!-- Editorial Insights Page (YouTube tips + sleep + movement + golden tip) -->
-  ${(editorial.sleep_tip || editorial.movement_tip || editorial.golden_tip || ytTips.length > 0) ? `
+  <!-- Editorial Insights Page -->
+  ${(editorial.sleep_tip || editorial.movement_tip || editorial.golden_tip) ? `
   <div class="page insights-page">
     <div class="insights-header">
       <div class="insights-label">\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF \u05D6\u05D4 \u00B7 \u05EA\u05D5\u05DB\u05DF \u05E2\u05E8\u05DB\u05EA\u05D9</div>
       <h2 class="insights-title">\u05D4\u05D8\u05D9\u05E4\u05D9\u05DD \u05E9\u05DC\u05E0\u05D5</h2>
     </div>
 
-    ${ytTips.map(tip => `
-    <div class="insight-card">
-      <div class="insight-icon">&#x25B6;</div>
-      <div class="insight-content">
-        <div class="insight-section-title">\u05D8\u05D9\u05E4 \u05DE\u05D4\u05D9\u05D5\u05D8\u05D9\u05D5\u05D1</div>
-        <div class="insight-text">${tip}</div>
-      </div>
-    </div>`).join('')}
-
     ${editorial.sleep_tip ? `
     <div class="insight-card">
-      <div class="insight-icon">&#x1F319;</div>
+      <div class="insight-icon">\uD83C\uDF19</div>
       <div class="insight-content">
         <div class="insight-section-title">\u05E9\u05D9\u05E0\u05D4 \u05D8\u05D5\u05D1\u05D4</div>
         <div class="insight-text">${editorial.sleep_tip}</div>
@@ -603,7 +586,7 @@ function buildHtml(content) {
 
     ${editorial.movement_tip ? `
     <div class="insight-card">
-      <div class="insight-icon">&#x1F3C3;</div>
+      <div class="insight-icon">\uD83C\uDFC3\u200D\u2640\uFE0F</div>
       <div class="insight-content">
         <div class="insight-section-title">\u05EA\u05E0\u05D5\u05E2\u05D4</div>
         <div class="insight-text">${editorial.movement_tip}</div>
@@ -612,9 +595,23 @@ function buildHtml(content) {
 
     ${editorial.golden_tip ? `
     <div class="golden-tip-box">
-      <div class="golden-tip-label">&#x2728; \u05D4\u05D8\u05D9\u05E4 \u05D4\u05D6\u05D4\u05D1 \u05E9\u05DC \u05D4\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF</div>
+      <div class="golden-tip-label">\u2728 \u05D4\u05D8\u05D9\u05E4 \u05D4\u05D6\u05D4\u05D1 \u05E9\u05DC \u05D4\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF</div>
       <div class="golden-tip-text">${editorial.golden_tip}</div>
     </div>` : ''}
+  </div>
+  ` : ''}
+
+  <!-- YouTube Tips Page -->
+  ${youtube_tips.length > 0 ? `
+  <div class="page tips-page">
+    <div class="section-label">\u05D8\u05D9\u05E4\u05D9 \u05D4\u05D1\u05E8\u05D9\u05D0\u05D5\u05EA</div>
+    <h2>\u05D8\u05D9\u05E4\u05D9\u05DD \u05E9\u05D7\u05D9\u05D9\u05D1\u05D9\u05DD \u05DC\u05D3\u05E2\u05EA</h2>
+    ${youtube_tips.map(t => `
+      <div class="tip-card">
+        <div class="tip-source">${t.title || 'YouTube'}</div>
+        <div class="tip-text">${t.tip || ''}</div>
+      </div>
+    `).join('')}
   </div>
   ` : ''}
 
