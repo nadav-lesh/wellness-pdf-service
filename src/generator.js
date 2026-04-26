@@ -29,57 +29,64 @@ async function generatePdf(content) {
 }
 
 function buildHtml(content) {
-  const { issue_theme, cover_image_url, recipes = [], supplements = [], youtube_tips = [], processed_at } = content;
+  const { issue_theme, theme_intro = '', cover_image_url, recipes = [], supplements = [], youtube_tips = [], editorial = {}, processed_at } = content;
 
   const issueDate = new Date(processed_at || Date.now()).toLocaleDateString('he-IL', {
     year: 'numeric', month: 'long', day: 'numeric',
   });
 
-  const recipesHtml = recipes.map((r, i) => `
+  const recipesHtml = recipes.map((r, i) => {
+    const isFirst = i === 0;
+    // Recipe 1: use the Action→Reason→Benefit editorial tip
+    // Recipes 2+: use their hebrew_description in the same styled box
+    const editorialTip = isFirst && editorial.recipe_tip ? editorial.recipe_tip : (r.hebrew_description || '');
+    const editorialWhy = isFirst && editorial.recipe_why ? editorial.recipe_why : '';
+    const editorialLabel = isFirst ? '\u05DC\u05DE\u05D4 \u05D6\u05D4 \u05D8\u05D5\u05D1 \u05DC\u05DA?' : '\u05DC\u05DE\u05D4 \u05DC\u05D0\u05DB\u05D5\u05DC \u05D0\u05EA \u05D6\u05D4?';
+    return `
     <div class="page recipe-page">
-      <div class="recipe-number">מתכון ${['א', 'ב', 'ג'][i] || i + 1}</div>
+      <div class="recipe-number">\u05DE\u05EA\u05DB\u05D5\u05DF ${['\u05D0', '\u05D1', '\u05D2'][i] || i + 1}</div>
 
       ${r.image ? `<img class="recipe-image" src="${r.image}" alt="${r.hebrew_title}" />` : ''}
 
       <h2 class="recipe-title">${r.hebrew_title || ''}</h2>
-      <p class="recipe-desc">${r.hebrew_description || ''}</p>
+      ${isFirst ? '' : `<p class="recipe-desc">${r.hebrew_description || ''}</p>`}
 
-      ${r.hebrew_benefits && r.hebrew_benefits.length > 0 ? `
-        <div class="benefits-box">
-          <div class="benefits-title">למה זה טוב לך?</div>
-          <ul class="benefits-list">
-            ${r.hebrew_benefits.map(b => `<li>${b}</li>`).join('')}
-          </ul>
+      ${editorialTip ? `
+        <div class="editorial-tip-box">
+          <div class="editorial-tip-label">${editorialLabel}</div>
+          <div class="editorial-tip-text">${editorialTip}</div>
+          ${editorialWhy ? `<div class="editorial-why">${editorialWhy}</div>` : ''}
         </div>
       ` : ''}
 
       ${r.macros ? `
         <div class="macros-grid">
           <div class="macro-item">
-            <span class="macro-value">${r.macros.calories?.amount || '—'}</span>
-            <span class="macro-label">קלוריות</span>
+            <span class="macro-value">${r.macros.calories?.amount || '\u2014'}</span>
+            <span class="macro-label">\u05E7\u05DC\u05D5\u05E8\u05D9\u05D5\u05EA</span>
           </div>
           <div class="macro-item">
-            <span class="macro-value">${r.macros.protein?.amount || '—'}g</span>
-            <span class="macro-label">חלבון</span>
+            <span class="macro-value">${r.macros.protein?.amount || '\u2014'}g</span>
+            <span class="macro-label">\u05D7\u05DC\u05D1\u05D5\u05DF</span>
           </div>
           <div class="macro-item">
-            <span class="macro-value">${r.macros.carbs?.amount || '—'}g</span>
-            <span class="macro-label">פחמימות</span>
+            <span class="macro-value">${r.macros.carbs?.amount || '\u2014'}g</span>
+            <span class="macro-label">\u05E4\u05D7\u05DE\u05D9\u05DE\u05D5\u05EA</span>
           </div>
           <div class="macro-item">
-            <span class="macro-value">${r.macros.fat?.amount || '—'}g</span>
-            <span class="macro-label">שומן</span>
+            <span class="macro-value">${r.macros.fat?.amount || '\u2014'}g</span>
+            <span class="macro-label">\u05E9\u05D5\u05DE\u05DF</span>
           </div>
         </div>
       ` : ''}
 
       <div class="recipe-meta">
-        ⏱ ${r.ready_in_minutes || '—'} דקות &nbsp;|&nbsp; 🍽 ${r.servings || '—'} מנות
-        ${r.source_url ? `&nbsp;|&nbsp; <a href="${r.source_url}">למתכון המלא ←</a>` : ''}
+        &#x23F1; ${r.ready_in_minutes || '\u2014'} \u05D3\u05E7\u05D5\u05EA &nbsp;|&nbsp; &#x1F37D; ${r.servings || '\u2014'} \u05DE\u05E0\u05D5\u05EA
+        ${r.source_url ? `&nbsp;|&nbsp; <a href="${r.source_url}">\u05DC\u05DE\u05EA\u05DB\u05D5\u05DF \u05D4\u05DE\u05DC\u05D0 \u2190</a>` : ''}
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   return `<!DOCTYPE html>
 <html dir="rtl" lang="he">
@@ -105,7 +112,7 @@ function buildHtml(content) {
       overflow: hidden;
     }
 
-    /* ── Cover Page ── */
+    /* -- Cover Page -- */
     .cover-page {
       background: #1a2e1a;
       display: flex;
@@ -134,6 +141,7 @@ function buildHtml(content) {
       justify-content: center;
     }
 
+    /* letter-spacing breaks Puppeteer RTL — bidi-override fixes it */
     .magazine-name {
       font-size: 13pt;
       font-weight: 300;
@@ -141,6 +149,8 @@ function buildHtml(content) {
       letter-spacing: 3px;
       margin-bottom: 6mm;
       text-transform: uppercase;
+      unicode-bidi: bidi-override;
+      direction: rtl;
     }
 
     .cover-theme {
@@ -170,18 +180,31 @@ function buildHtml(content) {
       font-weight: 300;
     }
 
-    /* ── Recipe Pages ── */
+    .cover-intro {
+      font-size: 10pt;
+      color: #B7E4C7;
+      font-weight: 300;
+      line-height: 1.6;
+      margin-top: 5mm;
+      border-top: 1px solid rgba(82,183,136,0.3);
+      padding-top: 4mm;
+    }
+
+    /* -- Recipe Pages -- */
     .recipe-page {
       padding: 14mm;
       background: #fafafa;
     }
 
+    /* letter-spacing — needs bidi-override */
     .recipe-number {
       font-size: 9pt;
       font-weight: 500;
       color: #52B788;
       letter-spacing: 2px;
       margin-bottom: 4mm;
+      unicode-bidi: bidi-override;
+      direction: rtl;
     }
 
     .recipe-image {
@@ -217,12 +240,15 @@ function buildHtml(content) {
       margin-bottom: 6mm;
     }
 
+    /* letter-spacing — needs bidi-override */
     .benefits-title {
       font-size: 9pt;
       font-weight: 700;
       color: #2D6A4F;
       margin-bottom: 3mm;
       letter-spacing: 1px;
+      unicode-bidi: bidi-override;
+      direction: rtl;
     }
 
     .benefits-list {
@@ -238,7 +264,7 @@ function buildHtml(content) {
     }
 
     .benefits-list li::before {
-      content: '✓ ';
+      content: '\u2713 ';
       font-weight: 700;
     }
 
@@ -285,19 +311,142 @@ function buildHtml(content) {
       font-weight: 500;
     }
 
-    /* ── YouTube Tips Page ── */
+    .editorial-tip-box {
+      background: #F0FAF4;
+      border-right: 4px solid #52B788;
+      border-radius: 2mm;
+      padding: 5mm 6mm;
+      margin-bottom: 6mm;
+    }
+
+    .editorial-tip-label {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #2D6A4F;
+      margin-bottom: 3mm;
+      unicode-bidi: bidi-override;
+      direction: rtl;
+    }
+
+    .editorial-tip-text {
+      font-size: 10.5pt;
+      color: #1a2e1a;
+      line-height: 1.7;
+      font-weight: 400;
+    }
+
+    .editorial-why {
+      font-size: 9pt;
+      color: #52B788;
+      margin-top: 3mm;
+      font-weight: 400;
+      font-style: italic;
+    }
+
+    /* -- Insights Page -- */
+    .insights-page {
+      padding: 14mm;
+      background: #fafafa;
+    }
+
+    .insights-header {
+      margin-bottom: 8mm;
+    }
+
+    .insights-label {
+      font-size: 9pt;
+      font-weight: 500;
+      color: #52B788;
+      margin-bottom: 3mm;
+    }
+
+    .insights-title {
+      font-size: 24pt;
+      font-weight: 900;
+      color: #1a2e1a;
+      line-height: 1.2;
+    }
+
+    .insight-card {
+      display: flex;
+      gap: 4mm;
+      background: #ffffff;
+      border-radius: 3mm;
+      padding: 5mm 6mm;
+      margin-bottom: 5mm;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      align-items: flex-start;
+    }
+
+    .insight-icon {
+      font-size: 18pt;
+      flex-shrink: 0;
+    }
+
+    .insight-content { flex: 1; }
+
+    .insight-section-title {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #1a2e1a;
+      margin-bottom: 2mm;
+    }
+
+    .insight-text {
+      font-size: 10pt;
+      color: #444;
+      line-height: 1.65;
+      font-weight: 400;
+    }
+
+    .golden-tip-box {
+      background: #1a2e1a;
+      border-radius: 3mm;
+      padding: 6mm 8mm;
+      margin-top: 6mm;
+    }
+
+    .golden-tip-label {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #95D5B2;
+      margin-bottom: 3mm;
+    }
+
+    .golden-tip-text {
+      font-size: 11pt;
+      color: #ffffff;
+      line-height: 1.7;
+      font-weight: 400;
+    }
+
+    .absorption-note {
+      font-size: 9pt;
+      color: #2D6A4F;
+      background: #F0FAF4;
+      border-radius: 1mm;
+      padding: 2mm 3mm;
+      margin-top: 2mm;
+      margin-bottom: 2mm;
+      font-weight: 500;
+    }
+
+    /* -- YouTube Tips Page -- */
     .tips-page {
       padding: 14mm;
       background: #0d1b2a;
       color: #ffffff;
     }
 
+    /* letter-spacing — needs bidi-override */
     .tips-page .section-label {
       font-size: 9pt;
       font-weight: 500;
       color: #74C69D;
       letter-spacing: 3px;
       margin-bottom: 6mm;
+      unicode-bidi: bidi-override;
+      direction: rtl;
     }
 
     .tips-page h2 {
@@ -330,18 +479,21 @@ function buildHtml(content) {
       font-weight: 400;
     }
 
-    /* ── Supplements Page ── */
+    /* -- Supplements Page -- */
     .supplements-page {
       padding: 14mm;
       background: #fafafa;
     }
 
+    /* letter-spacing — needs bidi-override */
     .supplements-page .section-label {
       font-size: 9pt;
       font-weight: 500;
       color: #52B788;
       letter-spacing: 3px;
       margin-bottom: 6mm;
+      unicode-bidi: bidi-override;
+      direction: rtl;
     }
 
     .supplements-page h2 {
@@ -405,47 +557,81 @@ function buildHtml(content) {
       : `<div class="cover-image-placeholder"></div>`
     }
     <div class="cover-content">
-      <div class="magazine-name">מגזין הבריאות שלך</div>
+      <div class="magazine-name">\u05DE\u05D2\u05D6\u05D9\u05DF \u05D4\u05D1\u05E8\u05D9\u05D0\u05D5\u05EA \u05E9\u05DC\u05DA</div>
       <div class="cover-divider"></div>
-      <div class="cover-theme">${issue_theme || 'גיליון חדש'}</div>
+      <div class="cover-theme">${issue_theme || '\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF \u05D7\u05D3\u05E9'}</div>
       <div class="cover-date">${issueDate}</div>
       <div class="cover-divider"></div>
-      <div class="cover-tagline">טיפים פשוטים. שינוי אמיתי.</div>
+      <div class="cover-tagline">\u05D8\u05D9\u05E4\u05D9\u05DD \u05E4\u05E9\u05D5\u05D8\u05D9\u05DD. \u05E9\u05D9\u05E0\u05D5\u05D9 \u05D0\u05DE\u05D9\u05EA\u05D9.</div>
+      ${theme_intro ? `<div class="cover-intro">${theme_intro}</div>` : ''}
     </div>
   </div>
 
   <!-- Recipe Pages -->
   ${recipesHtml}
 
-  <!-- YouTube Tips Page -->
-  ${youtube_tips.length > 0 ? `
-  <div class="page tips-page">
-    <div class="section-label">YOUTUBE · טיפי הבריאות</div>
-    <h2>טיפים שחייבים לדעת</h2>
-    ${youtube_tips.map(t => `
-      <div class="tip-card">
-        <div class="tip-source">${t.title || 'YouTube'}</div>
-        <div class="tip-text">${t.tip || ''}</div>
+  <!-- Editorial Insights Page (YouTube tips + sleep + movement + golden tip) -->
+  ${(editorial.sleep_tip || editorial.movement_tip || editorial.golden_tip || (editorial.youtube_tips && editorial.youtube_tips.length > 0)) ? `
+  <div class="page insights-page">
+    <div class="insights-header">
+      <div class="insights-label">\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF \u05D6\u05D4 \u00B7 \u05EA\u05D5\u05DB\u05DF \u05E2\u05E8\u05DB\u05EA\u05D9</div>
+      <h2 class="insights-title">\u05D4\u05D8\u05D9\u05E4\u05D9\u05DD \u05E9\u05DC\u05E0\u05D5</h2>
+    </div>
+
+    ${editorial.youtube_tips && editorial.youtube_tips.length > 0 ? editorial.youtube_tips.map(tip => `
+    <div class="insight-card">
+      <div class="insight-icon">&#x25B6;</div>
+      <div class="insight-content">
+        <div class="insight-section-title">\u05D8\u05D9\u05E4 \u05DE\u05D4\u05D9\u05D5\u05D8\u05D9\u05D5\u05D1</div>
+        <div class="insight-text">${tip}</div>
       </div>
-    `).join('')}
+    </div>`).join('') : ''}
+
+    ${editorial.sleep_tip ? `
+    <div class="insight-card">
+      <div class="insight-icon">&#x1F319;</div>
+      <div class="insight-content">
+        <div class="insight-section-title">\u05E9\u05D9\u05E0\u05D4 \u05D8\u05D5\u05D1\u05D4</div>
+        <div class="insight-text">${editorial.sleep_tip}</div>
+      </div>
+    </div>` : ''}
+
+    ${editorial.movement_tip ? `
+    <div class="insight-card">
+      <div class="insight-icon">&#x1F3C3;</div>
+      <div class="insight-content">
+        <div class="insight-section-title">\u05EA\u05E0\u05D5\u05E2\u05D4</div>
+        <div class="insight-text">${editorial.movement_tip}</div>
+      </div>
+    </div>` : ''}
+
+    ${editorial.golden_tip ? `
+    <div class="golden-tip-box">
+      <div class="golden-tip-label">&#x2728; \u05D4\u05D8\u05D9\u05E4 \u05D4\u05D6\u05D4\u05D1 \u05E9\u05DC \u05D4\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF</div>
+      <div class="golden-tip-text">${editorial.golden_tip}</div>
+    </div>` : ''}
   </div>
   ` : ''}
 
   <!-- Supplements Page -->
   ${supplements.length > 0 ? `
   <div class="page supplements-page">
-    <div class="section-label">SUPPLEMENTS · תוספי תזונה</div>
-    <h2>המומלצים השבוע</h2>
-    ${supplements.map(s => `
+    <div class="section-label">\u05EA\u05D5\u05E1\u05E4\u05D9 \u05EA\u05D6\u05D5\u05E0\u05D4</div>
+    <h2>\u05D4\u05DE\u05D5\u05DE\u05DC\u05E6\u05D9\u05DD \u05D4\u05E9\u05D1\u05D5\u05E2</h2>
+    ${supplements.map((s, si) => {
+      const suppTip = si === 0 && editorial.supplement_tip ? editorial.supplement_tip : (s.hebrew_description || s.description || '');
+      const absorptionNote = si === 0 && editorial.supplement_absorption_note ? editorial.supplement_absorption_note : '';
+      return `
       <div class="supplement-card">
         ${s.image ? `<img class="supplement-image" src="${s.image}" alt="${s.name}" />` : ''}
         <div class="supplement-info">
           <div class="supplement-name">${s.name || ''}</div>
-          <div class="supplement-desc">${s.description || ''}</div>
+          <div class="supplement-desc">${suppTip}</div>
+          ${absorptionNote ? `<div class="absorption-note">${absorptionNote}</div>` : ''}
           ${s.price ? `<div class="supplement-price">${s.price}</div>` : ''}
         </div>
       </div>
-    `).join('')}
+    `;}).join('')}
   </div>
   ` : ''}
 
