@@ -428,6 +428,13 @@ function buildHtml(content) {
       font-weight: 500;
     }
 
+    .supplement-bestseller {
+      font-size: 9pt;
+      color: #B7570A;
+      font-weight: 600;
+      margin-bottom: 2mm;
+    }
+
     .supplement-connection {
       font-size: 9pt;
       color: #52B788;
@@ -599,9 +606,17 @@ function buildHtml(content) {
   <!-- Unified Tips Page (YouTube/podcast + sleep + movement + golden tip) -->
   ${(() => {
     const tp = editorial.tips_page || {};
-    const ytTips = (tp.youtube_tips && tp.youtube_tips.length > 0)
+    // youtube_tips: array of { title, text } objects (new) or strings (legacy fallback)
+    const ytTipsRaw = (tp.youtube_tips && tp.youtube_tips.length > 0)
       ? tp.youtube_tips
-      : youtube_tips.filter(t => t.tip && t.tip.length > 10).slice(0, 3).map(t => t.tip);
+      : youtube_tips.filter(t => t.tip && t.tip.length > 10).slice(0, 3).map(t => ({
+          title: `\u05D8\u05D9\u05E4 \u05DE\u05D4\u05E2\u05E8\u05D5\u05E5 ${t.title || 'Huberman Lab'}`,
+          text: t.tip
+        }));
+    const ytTips = ytTipsRaw.map(t => typeof t === 'string'
+      ? { title: '\u05D8\u05D9\u05E4 \u05DE\u05D4\u05D9\u05D5\u05D8\u05D9\u05D5\u05D1 / \u05D4\u05E4\u05D5\u05D3\u05E7\u05D0\u05E1\u05D8', text: t }
+      : t
+    );
     const hasTips = tp.sleep || tp.movement || tp.golden_tip || ytTips.length > 0;
     if (!hasTips) return '';
     return `
@@ -615,8 +630,8 @@ function buildHtml(content) {
     <div class="insight-card">
       <div class="insight-icon">&#x25B6;</div>
       <div class="insight-content">
-        <div class="insight-section-title">\u05D8\u05D9\u05E4 \u05DE\u05D4\u05D9\u05D5\u05D8\u05D9\u05D5\u05D1 / \u05D4\u05E4\u05D5\u05D3\u05E7\u05D0\u05E1\u05D8</div>
-        <div class="insight-text">${tip}</div>
+        <div class="insight-section-title">${tip.title}</div>
+        <div class="insight-text">${tip.text}</div>
       </div>
     </div>`).join('')}
 
@@ -651,17 +666,19 @@ function buildHtml(content) {
   <div class="page supplements-page">
     <div class="section-label">\u05EA\u05D5\u05E1\u05E4\u05D9 \u05EA\u05D6\u05D5\u05E0\u05D4</div>
     <h2>\u05D4\u05DE\u05D5\u05DE\u05DC\u05E6\u05D9\u05DD \u05D4\u05E9\u05D1\u05D5\u05E2</h2>
-    ${supplements.map((s, si) => {
-      const suppTip = si === 0 && editorial.supplement_tip ? editorial.supplement_tip : (s.hebrew_description || s.description || '');
-      const absorptionNote = si === 0 && editorial.supplement_absorption_note ? editorial.supplement_absorption_note : '';
-      const connectionToRecipes = si === 0 && editorial.supplement_connection_to_recipes ? editorial.supplement_connection_to_recipes : '';
-      const whereToBuy = si === 0 && editorial.supplement_where_to_buy ? editorial.supplement_where_to_buy : '';
-      const disclaimer = si === 0 && editorial.supplement_disclaimer ? editorial.supplement_disclaimer : '';
+    ${supplements.map((s) => {
+      const suppTip = s.hebrew_description || s.description || '';
+      const absorptionNote = s.absorption_note || '';
+      const connectionToRecipes = s.connection_to_recipes || '';
+      const bestseller = s.bestseller_note || '';
+      const whereToBuy = s.where_to_buy || '';
+      const disclaimer = s.disclaimer || '';
       return `
       <div class="supplement-card">
         ${s.image ? `<img class="supplement-image" src="${s.image}" alt="${s.name}" />` : ''}
         <div class="supplement-info">
           <div class="supplement-name">${s.name || ''}</div>
+          ${bestseller ? `<div class="supplement-bestseller">&#x2B50; ${bestseller}</div>` : ''}
           <div class="supplement-desc">${suppTip}</div>
           ${absorptionNote ? `<div class="absorption-note">${absorptionNote}</div>` : ''}
           ${connectionToRecipes ? `<div class="supplement-connection">${connectionToRecipes}</div>` : ''}
