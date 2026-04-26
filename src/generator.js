@@ -36,9 +36,9 @@ function buildHtml(content) {
   });
 
   const recipesHtml = recipes.map((r, i) => {
-    const isFirst = i === 0;
-    const editorialTip = isFirst && editorial.recipe_tip ? editorial.recipe_tip : '';
-    const editorialWhy = isFirst && editorial.recipe_why ? editorial.recipe_why : '';
+    // Each recipe gets its own tip from GPT-4o (per-recipe Action→Reason→Benefit)
+    const recipeTip = r.tip || '';
+    const recipeWhy = r.why_this_recipe || '';
     return `
     <div class="page recipe-page">
       <div class="recipe-number">\u05DE\u05EA\u05DB\u05D5\u05DF ${['\u05D0', '\u05D1', '\u05D2'][i] || i + 1}</div>
@@ -48,11 +48,11 @@ function buildHtml(content) {
       <h2 class="recipe-title">${r.hebrew_title || ''}</h2>
       <p class="recipe-desc">${r.hebrew_description || ''}</p>
 
-      ${editorialTip ? `
+      ${recipeTip ? `
         <div class="editorial-tip-box">
           <div class="editorial-tip-label">\u05DC\u05DE\u05D4 \u05D6\u05D4 \u05D8\u05D5\u05D1 \u05DC\u05DA?</div>
-          <div class="editorial-tip-text">${editorialTip}</div>
-          ${editorialWhy ? `<div class="editorial-why">${editorialWhy}</div>` : ''}
+          <div class="editorial-tip-text">${recipeTip}</div>
+          ${recipeWhy ? `<div class="editorial-why">${recipeWhy}</div>` : ''}
         </div>
       ` : ''}
 
@@ -428,6 +428,31 @@ function buildHtml(content) {
       font-weight: 500;
     }
 
+    .supplement-connection {
+      font-size: 9pt;
+      color: #52B788;
+      margin-top: 2mm;
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    .supplement-where-to-buy {
+      font-size: 9pt;
+      color: #444;
+      margin-top: 2mm;
+      font-weight: 400;
+    }
+
+    .supplement-disclaimer {
+      font-size: 7.5pt;
+      color: #999;
+      margin-top: 3mm;
+      padding-top: 2mm;
+      border-top: 1px solid #eee;
+      font-weight: 300;
+      line-height: 1.4;
+    }
+
     /* -- YouTube Tips Page -- */
     .tips-page {
       padding: 14mm;
@@ -452,6 +477,8 @@ function buildHtml(content) {
       color: #ffffff;
       margin-bottom: 8mm;
       line-height: 1.2;
+      unicode-bidi: bidi-override;
+      direction: rtl;
     }
 
     .tip-card {
@@ -498,6 +525,8 @@ function buildHtml(content) {
       font-weight: 900;
       color: #1a2e1a;
       margin-bottom: 8mm;
+      unicode-bidi: bidi-override;
+      direction: rtl;
     }
 
     .supplement-card {
@@ -567,53 +596,55 @@ function buildHtml(content) {
   <!-- Recipe Pages -->
   ${recipesHtml}
 
-  <!-- Editorial Insights Page -->
-  ${(editorial.sleep_tip || editorial.movement_tip || editorial.golden_tip) ? `
+  <!-- Unified Tips Page (YouTube/podcast + sleep + movement + golden tip) -->
+  ${(() => {
+    const tp = editorial.tips_page || {};
+    const ytTips = (tp.youtube_tips && tp.youtube_tips.length > 0)
+      ? tp.youtube_tips
+      : youtube_tips.filter(t => t.tip && t.tip.length > 10).slice(0, 3).map(t => t.tip);
+    const hasTips = tp.sleep || tp.movement || tp.golden_tip || ytTips.length > 0;
+    if (!hasTips) return '';
+    return `
   <div class="page insights-page">
     <div class="insights-header">
-      <div class="insights-label">\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF \u05D6\u05D4 \u00B7 \u05EA\u05D5\u05DB\u05DF \u05E2\u05E8\u05DB\u05EA\u05D9</div>
+      <div class="insights-label">\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF \u05D6\u05D4 \u00B7 \u05D8\u05D9\u05E4\u05D9\u05DD \u05E9\u05DC \u05D4\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF</div>
       <h2 class="insights-title">\u05D4\u05D8\u05D9\u05E4\u05D9\u05DD \u05E9\u05DC\u05E0\u05D5</h2>
     </div>
 
-    ${editorial.sleep_tip ? `
+    ${ytTips.map(tip => `
     <div class="insight-card">
-      <div class="insight-icon">\uD83C\uDF19</div>
+      <div class="insight-icon">&#x25B6;</div>
+      <div class="insight-content">
+        <div class="insight-section-title">\u05D8\u05D9\u05E4 \u05DE\u05D4\u05D9\u05D5\u05D8\u05D9\u05D5\u05D1 / \u05D4\u05E4\u05D5\u05D3\u05E7\u05D0\u05E1\u05D8</div>
+        <div class="insight-text">${tip}</div>
+      </div>
+    </div>`).join('')}
+
+    ${tp.sleep ? `
+    <div class="insight-card">
+      <div class="insight-icon">&#x1F319;</div>
       <div class="insight-content">
         <div class="insight-section-title">\u05E9\u05D9\u05E0\u05D4 \u05D8\u05D5\u05D1\u05D4</div>
-        <div class="insight-text">${editorial.sleep_tip}</div>
+        <div class="insight-text">${tp.sleep}</div>
       </div>
     </div>` : ''}
 
-    ${editorial.movement_tip ? `
+    ${tp.movement ? `
     <div class="insight-card">
-      <div class="insight-icon">\uD83C\uDFC3\u200D\u2640\uFE0F</div>
+      <div class="insight-icon">&#x1F3C3;</div>
       <div class="insight-content">
         <div class="insight-section-title">\u05EA\u05E0\u05D5\u05E2\u05D4</div>
-        <div class="insight-text">${editorial.movement_tip}</div>
+        <div class="insight-text">${tp.movement}</div>
       </div>
     </div>` : ''}
 
-    ${editorial.golden_tip ? `
+    ${tp.golden_tip ? `
     <div class="golden-tip-box">
-      <div class="golden-tip-label">\u2728 \u05D4\u05D8\u05D9\u05E4 \u05D4\u05D6\u05D4\u05D1 \u05E9\u05DC \u05D4\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF</div>
-      <div class="golden-tip-text">${editorial.golden_tip}</div>
+      <div class="golden-tip-label">&#x2728; \u05D4\u05D8\u05D9\u05E4 \u05D4\u05D6\u05D4\u05D1 \u05E9\u05DC \u05D4\u05D2\u05D9\u05DC\u05D9\u05D5\u05DF</div>
+      <div class="golden-tip-text">${tp.golden_tip}</div>
     </div>` : ''}
-  </div>
-  ` : ''}
-
-  <!-- YouTube Tips Page -->
-  ${youtube_tips.length > 0 ? `
-  <div class="page tips-page">
-    <div class="section-label">\u05D8\u05D9\u05E4\u05D9 \u05D4\u05D1\u05E8\u05D9\u05D0\u05D5\u05EA</div>
-    <h2>\u05D8\u05D9\u05E4\u05D9\u05DD \u05E9\u05D7\u05D9\u05D9\u05D1\u05D9\u05DD \u05DC\u05D3\u05E2\u05EA</h2>
-    ${youtube_tips.map(t => `
-      <div class="tip-card">
-        <div class="tip-source">${t.title || 'YouTube'}</div>
-        <div class="tip-text">${t.tip || ''}</div>
-      </div>
-    `).join('')}
-  </div>
-  ` : ''}
+  </div>`;
+  })()}
 
   <!-- Supplements Page -->
   ${supplements.length > 0 ? `
@@ -623,6 +654,9 @@ function buildHtml(content) {
     ${supplements.map((s, si) => {
       const suppTip = si === 0 && editorial.supplement_tip ? editorial.supplement_tip : (s.hebrew_description || s.description || '');
       const absorptionNote = si === 0 && editorial.supplement_absorption_note ? editorial.supplement_absorption_note : '';
+      const connectionToRecipes = si === 0 && editorial.supplement_connection_to_recipes ? editorial.supplement_connection_to_recipes : '';
+      const whereToBuy = si === 0 && editorial.supplement_where_to_buy ? editorial.supplement_where_to_buy : '';
+      const disclaimer = si === 0 && editorial.supplement_disclaimer ? editorial.supplement_disclaimer : '';
       return `
       <div class="supplement-card">
         ${s.image ? `<img class="supplement-image" src="${s.image}" alt="${s.name}" />` : ''}
@@ -630,7 +664,10 @@ function buildHtml(content) {
           <div class="supplement-name">${s.name || ''}</div>
           <div class="supplement-desc">${suppTip}</div>
           ${absorptionNote ? `<div class="absorption-note">${absorptionNote}</div>` : ''}
+          ${connectionToRecipes ? `<div class="supplement-connection">${connectionToRecipes}</div>` : ''}
+          ${whereToBuy ? `<div class="supplement-where-to-buy">\u05D0\u05D9\u05E4\u05D4 \u05DC\u05E7\u05E0\u05D5\u05EA: ${whereToBuy}</div>` : ''}
           ${s.price ? `<div class="supplement-price">${s.price}</div>` : ''}
+          ${disclaimer ? `<div class="supplement-disclaimer">${disclaimer}</div>` : ''}
         </div>
       </div>
     `;}).join('')}
