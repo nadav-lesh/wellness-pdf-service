@@ -81,6 +81,31 @@ function buildHtml(content) {
         &#x23F1; ${r.ready_in_minutes || '\u2014'} \u05D3\u05E7\u05D5\u05EA &nbsp;|&nbsp; &#x1F37D; ${r.servings || '\u2014'} \u05DE\u05E0\u05D5\u05EA
         ${r.source_url ? `&nbsp;|&nbsp; <a href="${r.source_url}">\u05DC\u05DE\u05EA\u05DB\u05D5\u05DF \u05D4\u05DE\u05DC\u05D0 \u2190</a>` : ''}
       </div>
+
+      ${(r.hebrew_ingredients && r.hebrew_ingredients.length > 0) ? `
+        <div class="ingredients-section">
+          <h3 class="ingredients-title">\u05DE\u05E8\u05DB\u05D9\u05D1\u05D9\u05DD</h3>
+          <ul class="ingredients-list">
+            ${r.hebrew_ingredients.map(ing => `
+              <li class="ingredient-item">
+                <span class="ingredient-amount">${ing.amount || ''}</span>
+                <span class="ingredient-name">${ing.name || ''}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      ` : ''}
+
+      ${(r.hebrew_steps && r.hebrew_steps.length > 0) ? `
+        <div class="steps-section">
+          <h3 class="steps-title">\u05D0\u05D5\u05E4\u05DF \u05D4\u05DB\u05E0\u05D4</h3>
+          <ol class="steps-list">
+            ${r.hebrew_steps.map(step => `
+              <li class="step-item">${step}</li>
+            `).join('')}
+          </ol>
+        </div>
+      ` : ''}
     </div>
   `;
   }).join('');
@@ -308,6 +333,80 @@ function buildHtml(content) {
       font-weight: 500;
     }
 
+    .ingredients-section, .steps-section {
+      margin-top: 5mm;
+      padding-top: 4mm;
+      border-top: 1px solid #e8e8e8;
+    }
+
+    .ingredients-title, .steps-title {
+      font-size: 13pt;
+      font-weight: 700;
+      color: #1B4332;
+      margin-bottom: 3mm;
+    }
+
+    .ingredients-list {
+      list-style: none;
+      padding: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2mm 6mm;
+    }
+
+    .ingredient-item {
+      font-size: 9.5pt;
+      color: #333;
+      padding: 1.5mm 0;
+      border-bottom: 1px dotted #e0e0e0;
+      direction: rtl;
+    }
+
+    .ingredient-amount {
+      font-weight: 600;
+      color: #2D6A4F;
+      margin-left: 2mm;
+    }
+
+    .ingredient-name {
+      font-weight: 400;
+    }
+
+    .steps-list {
+      padding-right: 5mm;
+      padding-left: 0;
+      counter-reset: step-counter;
+      list-style: none;
+    }
+
+    .step-item {
+      font-size: 9.5pt;
+      color: #333;
+      line-height: 1.6;
+      padding: 2mm 0;
+      padding-right: 8mm;
+      position: relative;
+      border-bottom: 1px dotted #f0f0f0;
+      counter-increment: step-counter;
+    }
+
+    .step-item::before {
+      content: counter(step-counter);
+      position: absolute;
+      right: 0;
+      top: 2mm;
+      background: #2D6A4F;
+      color: white;
+      width: 5.5mm;
+      height: 5.5mm;
+      border-radius: 50%;
+      font-size: 8pt;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .editorial-tip-box {
       background: #F0FAF4;
       border-right: 4px solid #52B788;
@@ -448,6 +547,17 @@ function buildHtml(content) {
       color: #444;
       margin-top: 2mm;
       font-weight: 400;
+    }
+
+    .supplement-link {
+      margin-top: 2mm;
+    }
+
+    .supplement-link a {
+      color: #2D6A4F;
+      text-decoration: none;
+      font-size: 9pt;
+      font-weight: 500;
     }
 
     .supplement-disclaimer {
@@ -683,6 +793,7 @@ function buildHtml(content) {
           ${absorptionNote ? `<div class="absorption-note">${absorptionNote}</div>` : ''}
           ${connectionToRecipes ? `<div class="supplement-connection">${connectionToRecipes}</div>` : ''}
           ${whereToBuy ? `<div class="supplement-where-to-buy">\u05D0\u05D9\u05E4\u05D4 \u05DC\u05E7\u05E0\u05D5\u05EA: ${whereToBuy}</div>` : ''}
+          ${s.url ? `<div class="supplement-link"><a href="${s.url}">\u05DC\u05DE\u05D5\u05E6\u05E8 \u2190</a></div>` : ''}
           ${s.price ? `<div class="supplement-price">${s.price}</div>` : ''}
           ${disclaimer ? `<div class="supplement-disclaimer">${disclaimer}</div>` : ''}
         </div>
